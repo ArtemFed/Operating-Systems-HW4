@@ -33,6 +33,11 @@ typedef struct {
     bool is_started;
 } Garden;
 
+struct ConnectionArgs {
+    int gardener_id;
+    int index;
+};
+
 
 Garden *garden;
 
@@ -69,68 +74,6 @@ void printGarden(Garden *garden_for_print) {
            count_of_watered, count_of_faded, count_of_dead);
 }
 
-
-// Функция потока для обработки клиентского подключения
-void *connectionHandler(void *socket_desc) {
-    int new_socket = *(int *) socket_desc;
-    int gardener_id = 0;
-    int index;
-    int answer;
-
-    // Получаем значения indexes (номер цветка) от клиента
-    read(new_socket, &gardener_id, sizeof(int));
-
-    while (garden->is_started) {
-        sleep(1);
-
-        printf("Day №%d. Gardener №%d started working.\n", garden->cur_day, gardener_id);
-
-        int countOfWateredFlowers = 0;
-        for (int i = 0; i < NUM_FLOWERS / 2; i++) {
-            read(new_socket, &index, sizeof(int));
-
-            answer = 0;
-
-            // Пробуем полить цветок под index
-            if (garden->flowers[index] == DEAD) {
-                // Цветок уже умер... RIP
-                printf("Gardener №%d: Flower №%d already DEAD\n", gardener_id, index);
-                answer = 1;
-            } else if (garden->flowers[index] == WATERED) {
-                // Цветок уже был полит
-                printf("Gardener №%d: Flower №%d already WATERED\n", gardener_id, index);
-                answer = 2;
-            } else {
-                // Поливаем цветок под index
-                garden->flowers[index] = WATERED;
-                printf("Gardener №%d: Flower №%d was WATERED\n", gardener_id, index);
-                countOfWateredFlowers++;
-            }
-
-            if (!garden->is_started) {
-                answer = -1;
-            }
-            send(new_socket, &answer, sizeof(int), 0);
-        }
-
-        sleep(1);
-
-        send(new_socket, &countOfWateredFlowers, sizeof(int), 0);
-        printf(
-                "Gardener №%d is going to bed. Today He watered: %d flowers\n",
-                gardener_id,
-                countOfWateredFlowers
-        );
-    }
-
-    // Закрываем сокет для клиента
-    close(new_socket);
-
-    // Освобождаем память выделенную для сокета
-    free(socket_desc);
-}
-
-int currentCountOfClients = 0;
 
 void *daysProcess() {
     // Код процесса отслеживания состояния цветов на клумбе
@@ -179,6 +122,8 @@ void *daysProcess() {
     exit(0);
 }
 
+int currentCountOfClients = 0;
+
 int main(int argc, char const *argv[]) {
 //    signal(SIGINT, sigfunc);
 //    signal(SIGTERM, sigfunc);
@@ -204,41 +149,30 @@ int main(int argc, char const *argv[]) {
         }
     }
 
-    int server_fd, new_socket;
-    struct sockaddr_in address;
-    int opt = 1;
-    int addrlen = sizeof(address);
+    int server_fd;
+    struct sockaddr_in server_addr, client_addr;
+    socklen_t addr_len = sizeof(server_addr);
+    socklen_t client_len = sizeof(client_addr);
     pthread_t thread_id;
 
     printf("FLOWER SERVER\n");
 
     // Создаем TCP сокет
-    if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
+    if ((server_fd = socket(AF_INET, SOCK_DGRAM, 0)) == 0) {
         perror("socket failed");
         exit(EXIT_FAILURE);
     }
 
-    // Устанавливаем опции для сокета
-    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))) {
-        perror("setsockopt");
-        exit(EXIT_FAILURE);
-    }
 
-    memset(&address, 0, sizeof(address));
+    memset(&server_addr, 0, sizeof(server_addr));
 
-    address.sin_family = AF_INET;
-    address.sin_addr.s_addr = INADDR_ANY;
-    address.sin_port = htons(server_port);
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_addr.s_addr = INADDR_ANY;
+    server_addr.sin_port = htons(server_port);
 
     // Привязываем сокет к адресу и порту
-    if (bind(server_fd, (struct sockaddr *) &address, sizeof(address)) < 0) {
+    if (bind(server_fd, (struct sockaddr *) &server_addr, sizeof(server_addr)) < 0) {
         perror("bind failed");
-        exit(EXIT_FAILURE);
-    }
-
-    // Слушаем входящие подключения
-    if (listen(server_fd, 2) < 0) {
-        perror("listen");
         exit(EXIT_FAILURE);
     }
 
@@ -258,25 +192,52 @@ int main(int argc, char const *argv[]) {
 
     printf("Flowers are waiting for Gardeners...\n");
 
+    sleep(2);
+
     if (pthread_create(&thread_id, NULL, daysProcess, &garden->all_days_count) > 0) {
         perror("could not create thread");
         return 1;
     }
 
     // Обрабатываем каждое новое подключение в отдельном потоке
-    while ((new_socket = accept(server_fd, (struct sockaddr *) &address, (socklen_t *) &addrlen))) {
+    while (garden->is_started) {
         currentCountOfClients++;
 
-        // Создаем новый сокет для клиента
-        int *socket_desc = malloc(1);
-        *socket_desc = new_socket;
+        // Принимаем запрос от клиента
+        struct ConnectionArgs conn_args;
+        recvfrom(server_fd, &conn_args, sizeof(struct ConnectionArgs), 0,
+                 (struct sockaddr *)&client_addr, &client_len);
 
-        // Создаем поток для обработки клиентского подключения
-        if (pthread_create(&thread_id, NULL, connectionHandler, (void *) socket_desc) > 0) {
-            perror("could not create thread");
-            return 1;
+        int index = conn_args.index;
+        int gardener_id = conn_args.gardener_id;
+
+        int answer = 0;
+
+        // Пробуем полить цветок под index
+        if (garden->flowers[index] == DEAD) {
+            // Цветок уже умер... RIP
+            printf("Gardener №%d: Flower №%d already DEAD\n", gardener_id, index);
+            answer = 1;
+        } else if (garden->flowers[index] == WATERED) {
+            // Цветок уже был полит
+            printf("Gardener №%d: Flower №%d already WATERED\n", gardener_id, index);
+            answer = 2;
+        } else {
+            // Поливаем цветок под index
+            garden->flowers[index] = WATERED;
+            printf("Gardener №%d: Flower №%d was WATERED\n", gardener_id, index);
         }
+
+        if (!garden->is_started) {
+            answer = -1;
+        }
+        sendto(server_fd, &answer, sizeof(answer), 0,
+               (struct sockaddr *)&client_addr, sizeof(client_addr));
     }
 
+
+    // Закрываем сокет
+    close(server_fd);
+
     return 0;
-} 
+}
