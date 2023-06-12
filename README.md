@@ -79,7 +79,7 @@
 
 
 #### 1. Специфика: <br/>
-Теперь к программе добавлен файл [viewer.c](https://github.com/ArtemFed/Operating-Systems-HW3/tree/main/score6-9/viewer.c): <br/>
+Теперь к программе добавлен файл [viewer.c](https://github.com/ArtemFed/Operating-Systems-HW4/tree/main/score6-9/viewer.c): <br/>
 Viewer отвечает за удаленный просмотр действий сервера и выводит информацию о клумбе в различные моменты времени
 
 Его необходимо запускать так:
