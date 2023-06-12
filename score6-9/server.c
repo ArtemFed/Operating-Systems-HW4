@@ -256,8 +256,6 @@ int main(int argc, char const *argv[]) {
             sprintf((char *) &buffer, "%s", printGarden(garden));
             sendto(server_fd, &buffer, sizeof(buffer), 0,
                    (struct sockaddr *)&client_addr, sizeof(client_addr));
-
-            sleep(5);
         }
     }
 
@@ -266,85 +264,4 @@ int main(int argc, char const *argv[]) {
     close(server_fd);
 
     return 0;
-}
-
-// Функция потока для обработки клиентского подключения
-void *connectionHandler(void *socket_desc) {
-    int new_socket = *(int *) socket_desc;
-    char client_type;
-    int client_id = 0;
-    int index;
-    int answer;
-
-    char buffer[1024] = {0};
-
-    // Получаем значения indexes (номер цветка) от клиента
-    read(new_socket, &client_type, sizeof(client_type));
-
-    // Получаем значения indexes (номер цветка) от клиента
-    read(new_socket, &client_id, sizeof(client_id));
-
-    if (client_type == 'g') {
-        printf("Gardener №%d connected\n", client_id);
-
-        while (garden->is_started) {
-            sleep(1);
-
-            printf("Day №%d. Gardener №%d started working.\n", garden->cur_day, client_id);
-
-            int count_of_watered_flowers = 0;
-            for (int i = 0; i < NUM_FLOWERS / 2; i++) {
-                read(new_socket, &index, sizeof(int));
-
-                answer = 0;
-
-                // Пробуем полить цветок под index
-                if (garden->flowers[index] == DEAD) {
-                    // Цветок уже умер... RIP
-                    printf("Gardener №%d: Flower №%d already DEAD\n", client_id, index);
-                    answer = 1;
-                } else if (garden->flowers[index] == WATERED) {
-                    // Цветок уже был полит
-                    printf("Gardener №%d: Flower №%d already WATERED\n", client_id, index);
-                    answer = 2;
-                } else {
-                    // Поливаем цветок под index
-                    garden->flowers[index] = WATERED;
-                    printf("Gardener №%d: Flower №%d was WATERED\n", client_id, index);
-                    count_of_watered_flowers++;
-                }
-
-                if (!garden->is_started) {
-                    answer = -1;
-                }
-                send(new_socket, &answer, sizeof(int), 0);
-            }
-
-            sleep(1);
-
-            send(new_socket, &count_of_watered_flowers, sizeof(int), 0);
-            printf(
-                    "Gardener №%d is going to bed. Today He watered: %d flowers\n",
-                    client_id,
-                    count_of_watered_flowers
-            );
-        }
-
-        printf("Gardener №%d disconnected\n", client_id);
-    } else {
-        printf("Viewer №%d connected\n", client_id);
-
-        while (garden->is_started) {
-            printf("Send Info to viewer %d\n", client_id);
-            sprintf((char *) &buffer, "%s", printGarden(garden));
-            send(new_socket, &buffer, strlen(buffer), 0);
-            sleep(5);
-        }
-    }
-
-    // Закрываем сокет для клиента
-    close(new_socket);
-
-    // Освобождаем память выделенную для сокета
-    free(socket_desc);
 }

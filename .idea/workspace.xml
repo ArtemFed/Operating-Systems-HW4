@@ -27,11 +27,9 @@
   <component name="ChangeListManager">
     <list default="true" id="c3ddf527-bbeb-40c3-8f46-94261ba4f7d1" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/score4-5/client.c" beforeDir="false" afterPath="$PROJECT_DIR$/score4-5/client.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/score4-5/server.c" beforeDir="false" afterPath="$PROJECT_DIR$/score4-5/server.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/score6-8/client.c" beforeDir="false" afterPath="$PROJECT_DIR$/score6-9/client.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/score6-8/server.c" beforeDir="false" afterPath="$PROJECT_DIR$/score6-9/server.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/score6-8/viewer.c" beforeDir="false" afterPath="$PROJECT_DIR$/score6-9/viewer.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/score6-9/client.c" beforeDir="false" afterPath="$PROJECT_DIR$/score6-9/client.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/score6-9/server.c" beforeDir="false" afterPath="$PROJECT_DIR$/score6-9/server.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/score6-9/viewer.c" beforeDir="false" afterPath="$PROJECT_DIR$/score6-9/viewer.c" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -165,7 +163,7 @@
       <workItem from="1684616987938" duration="19561000" />
       <workItem from="1684777358036" duration="62000" />
       <workItem from="1686425381621" duration="340000" />
-      <workItem from="1686477420266" duration="15856000" />
+      <workItem from="1686477420266" duration="21045000" />
     </task>
     <servers />
   </component>

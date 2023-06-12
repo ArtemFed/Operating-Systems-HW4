@@ -66,8 +66,10 @@ int main(int argc, char const *argv[]) {
     }
 
     int gardener_id = rand() % 90 + 10;
+    socklen_t addr_len = sizeof(serv_addr);
 
     bool server_is_connected = true;
+    printf("Gardener №%d started\n", gardener_id);
 
     while (server_is_connected) {
         int server_answer_1 = 0;
@@ -87,11 +89,11 @@ int main(int argc, char const *argv[]) {
 
             sendto(sock, &connection_args, sizeof(connection_args), 0, (struct sockaddr *) &serv_addr, sizeof(serv_addr));
 
-            socklen_t addr_len = sizeof(serv_addr);
             int rec_len = recvfrom(sock, &server_answer_1, sizeof(server_answer_1), 0, (struct sockaddr *) &serv_addr, &addr_len);
             if (rec_len < 0 ) {
                 printf("Error while reading");
-                continue;
+                server_is_connected = false;
+                break;
             }
 
             if (server_answer_1 == 0) {
